@@ -1,13 +1,16 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  TextInput,
 } from "react-native";
 
 export default function Approved() {
+  const [search, setSearch] = useState("");
+
   // SAMPLE DATA (replace with API later)
   const approvedLogs = [
     {
@@ -30,38 +33,45 @@ export default function Approved() {
     },
   ];
 
+  // 🔍 SEARCH FILTER
+  const filteredLogs = approvedLogs.filter((item) =>
+    item.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Approved Logbook</Text>
 
-      <ScrollView horizontal>
-        <View>
-          {/* TABLE HEADER */}
-          <View style={styles.tableHeader}>
-            <Text style={styles.headerCell}>Name</Text>
-            <Text style={styles.headerCell}>Address</Text>
-            <Text style={styles.headerCell}>Contact</Text>
-            <Text style={styles.headerCell}>Activity</Text>
-            <Text style={styles.headerCell}>Time In</Text>
-            <Text style={styles.headerCell}>Status</Text>
-          </View>
+      {/* 🔍 SEARCH BAR */}
+      <TextInput
+        style={styles.search}
+        placeholder="Search name..."
+        value={search}
+        onChangeText={setSearch}
+      />
 
-          {/* TABLE ROWS */}
-          {approvedLogs.map((item) => (
-            <View key={item.id} style={styles.tableRow}>
-              <Text style={styles.cell}>{item.name}</Text>
-              <Text style={styles.cell}>{item.address}</Text>
-              <Text style={styles.cell}>{item.contact}</Text>
-              <Text style={styles.cell}>{item.activity}</Text>
-              <Text style={styles.cell}>{item.time_in}</Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {filteredLogs.map((item) => (
+          <View key={item.id} style={styles.card}>
+            {/* NAME */}
+            <Text style={styles.name}>{item.name}</Text>
 
-              {/* STATUS */}
-              <Text style={[styles.cell, styles.approved]}>
-                {item.status}
-              </Text>
+            {/* DETAILS */}
+            <Text style={styles.text}>📍 {item.address}</Text>
+            <Text style={styles.text}>📞 {item.contact}</Text>
+            <Text style={styles.text}>📋 {item.activity}</Text>
+
+            {/* TIME */}
+            <View style={styles.row}>
+              <Text style={styles.time}>Time In: {item.time_in}</Text>
             </View>
-          ))}
-        </View>
+
+            {/* STATUS */}
+            <View style={styles.statusBox}>
+              <Text style={styles.statusText}>{item.status}</Text>
+            </View>
+          </View>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -82,37 +92,57 @@ const styles = StyleSheet.create({
     color: "#1e3a8a",
   },
 
-  tableHeader: {
-    flexDirection: "row",
-    backgroundColor: "#2563eb",
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-
-  headerCell: {
-    width: 120,
-    color: "#fff",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-
-  tableRow: {
-    flexDirection: "row",
+  search: {
     backgroundColor: "#fff",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderWidth: 1,
     borderColor: "#e5e7eb",
   },
 
-  cell: {
-    width: 120,
-    textAlign: "center",
-    fontSize: 12,
+  card: {
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 15,
+    marginBottom: 12,
+    elevation: 3,
+  },
+
+  name: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 5,
     color: "#111827",
   },
 
-  approved: {
-    color: "green",
+  text: {
+    fontSize: 13,
+    color: "#374151",
+    marginBottom: 3,
+  },
+
+  row: {
+    marginTop: 10,
+  },
+
+  time: {
+    fontSize: 12,
+    color: "#555",
+  },
+
+  statusBox: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    backgroundColor: "#16a34a",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+
+  statusText: {
+    color: "#fff",
+    fontSize: 12,
     fontWeight: "bold",
   },
 });

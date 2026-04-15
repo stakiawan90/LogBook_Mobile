@@ -115,12 +115,7 @@ export default function AdminDashboard() {
             onPress={() => router.push("/admin/approved")}
           />
 
-          <StatCard
-            title="Rejected"
-            value={stats.totalUsers}
-            color="#F44336"
-            onPress={() => router.push("/admin/rejected")}
-          />
+        
 
           <StatCard
             title="Done"
@@ -134,6 +129,13 @@ export default function AdminDashboard() {
             value={stats.pendingApprovals}
             color="#FF9800"
             onPress={() => router.push("/admin/pending")}
+          />
+
+            <StatCard
+            title="Rejected"
+            value={stats.totalUsers}
+            color="#F44336"
+            onPress={() => router.push("/admin/rejected")}
           />
         </View>
 
