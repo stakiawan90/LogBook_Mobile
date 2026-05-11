@@ -1,4 +1,4 @@
-// app/admin/dashboard.tsx
+// app/staff/dashboard.tsx
 import { useRouter } from "expo-router";
 import {
   StyleSheet,
@@ -24,7 +24,7 @@ type ActivityType = {
   status: "pending" | "completed" | "cancelled";
 };
 
-export default function AdminDashboard() {
+export default function StaffDashboard() {
   const router = useRouter();
 
   const [stats] = useState<DashboardStats>({
@@ -35,20 +35,45 @@ export default function AdminDashboard() {
   });
 
   const [recentActivities] = useState<ActivityType[]>([
-    { id: "1", title: "New user registration", time: "5 minutes ago", status: "completed" },
-    { id: "2", title: "New user account created", time: "3 hours ago", status: "completed" },
-    { id: "3", title: "Notification sent to users", time: "3 hours ago", status: "completed" },
-    { id: "4", title: "Product review reported", time: "1 day ago", status: "pending" },
+    {
+      id: "1",
+      title: "New request received",
+      time: "5 minutes ago",
+      status: "completed",
+    },
+    {
+      id: "2",
+      title: "Staff account updated",
+      time: "3 hours ago",
+      status: "completed",
+    },
+    {
+      id: "3",
+      title: "Notification sent",
+      time: "3 hours ago",
+      status: "completed",
+    },
+    {
+      id: "4",
+      title: "Pending approval",
+      time: "1 day ago",
+      status: "pending",
+    },
   ]);
 
   const handleLogout = () => {
-    Alert.alert("Logout", "sure ka ganahan ka mo log out?", [
-      { text: "di raba", style: "cancel" },
-      { text: "oo gud", onPress: () => router.replace("/") },
+    Alert.alert("Logout", "Are you sure you want to log out?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Yes",
+        onPress: () => router.replace("/"),
+      },
     ]);
   };
 
-  /* ✅ REUSABLE STAT CARD */
   const StatCard = ({
     title,
     value,
@@ -70,7 +95,6 @@ export default function AdminDashboard() {
     </TouchableOpacity>
   );
 
-  /* ✅ ACTIVITY COMPONENT */
   const ActivityCard = ({ item }: { item: ActivityType }) => (
     <View style={styles.activityItem}>
       <View style={styles.activityContent}>
@@ -97,59 +121,62 @@ export default function AdminDashboard() {
       <View style={styles.header}>
         <View>
           <Text style={styles.welcomeText}>Welcome back,</Text>
-          <Text style={styles.adminName}>Admin User</Text>
+          <Text style={styles.staffName}>Staff User</Text>
         </View>
 
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={styles.logoutButton}
+        >
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* ✅ STATS GRID */}
         <View style={styles.statsGrid}>
           <StatCard
             title="Approved"
             value={stats.totalUsers}
             color="#4CAF50"
-            onPress={() => router.push("/admin/approved")}
+            onPress={() => router.push("/staff/approved")}
           />
-
-        
 
           <StatCard
             title="Done"
             value={stats.done}
             color="#2196F3"
-            onPress={() => router.push("/admin/done")}
+            onPress={() => router.push("/staff/done")}
           />
 
           <StatCard
             title="Pending"
             value={stats.pendingApprovals}
             color="#FF9800"
-            onPress={() => router.push("/admin/pending")}
+            onPress={() => router.push("/staff/pending")}
           />
 
-            <StatCard
+          <StatCard
             title="Rejected"
             value={stats.totalUsers}
             color="#F44336"
-            onPress={() => router.push("/admin/rejected")}
+            onPress={() => router.push("/staff/rejected")}
           />
         </View>
 
-        {/* QUICK ACTIONS */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
 
           <View style={styles.actionsGrid}>
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => Alert.alert("Users", "Manage Users")}
+              onPress={() =>
+                Alert.alert("Requests", "Manage Requests")
+              }
             >
-              <Text style={styles.actionIcon}>👥</Text>
-              <Text style={styles.actionText}>Manage Users</Text>
+              <Text style={styles.actionIcon}>📋</Text>
+              <Text style={styles.actionText}>
+                Manage Requests
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -162,11 +189,10 @@ export default function AdminDashboard() {
           </View>
         </View>
 
-        {/* RECENT HISTORY */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent History</Text>
-          </View>
+          <Text style={styles.sectionTitle}>
+            Recent History
+          </Text>
 
           <View style={styles.activitiesList}>
             {recentActivities.map((item) => (
@@ -179,7 +205,6 @@ export default function AdminDashboard() {
   );
 }
 
-/* STYLES */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
 
@@ -193,7 +218,11 @@ const styles = StyleSheet.create({
   },
 
   welcomeText: { fontSize: 14, color: "#666" },
-  adminName: { fontSize: 24, fontWeight: "bold", color: "#333" },
+  staffName: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+  },
 
   logoutButton: {
     backgroundColor: "#ff4444",
@@ -224,13 +253,17 @@ const styles = StyleSheet.create({
 
   section: { padding: 20 },
 
-  sectionTitle: { fontSize: 18, fontWeight: "600" },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 10,
+  },
 
   actionsGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
-
+s
   actionButton: {
     width: "48%",
     backgroundColor: "#fff",
@@ -258,17 +291,27 @@ const styles = StyleSheet.create({
   activityContent: { flex: 1 },
 
   activityTitle: { fontSize: 14 },
-  activityTime: { fontSize: 12, color: "#999" },
+  activityTime: {
+    fontSize: 12,
+    color: "#999",
+  },
 
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
   },
-
-  statusCompleted: { backgroundColor: "#4CAF50" },
-  statusPending: { backgroundColor: "#FF9800" },
-  statusCancelled: { backgroundColor: "#F44336" },
-
-  statusText: { color: "#fff", fontSize: 12 },
+  statusCompleted: {
+    backgroundColor: "#4CAF50",
+  },
+  statusPending: {
+    backgroundColor: "#FF9800",
+  },
+  statusCancelled: {
+    backgroundColor: "#F44336",
+  },
+  statusText: {
+    color: "#fff",
+    fontSize: 12,
+  },
 });
