@@ -11,39 +11,49 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { login } from "../Api/auth";
 
 export default function Index() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberPassword, setRememberPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert("Error", "Email and Password Required!");
       return;
     }
 
-    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    setIsLoading(true);
 
-    if (!gmailRegex.test(email)) {
-      Alert.alert("Error", "Please enter a valid Gmail address (@gmail.com)");
-      return;
+    try {
+      const response = await login(email.trim(), password.trim());
+
+      if (response.status) {
+        Alert.alert("Success", `Welcome back, ${response.user.name}!`);
+
+        const role = response.role?.toLowerCase() || "user";
+        if (role === "admin" || role === "staff") {
+          router.push("/admin/dashboard");
+        } else {
+          const token = encodeURIComponent(response.token);
+          const name = encodeURIComponent(response.user.name);
+          router.push(`/user/dashboard?token=${token}&name=${name}`);
+        }
+      }
+    } catch (error: any) {
+      Alert.alert("Login Failed", error.message || "An error occurred");
+    } finally {
+      setIsLoading(false);
     }
-
-    Alert.alert(
-      "Success",
-      rememberPassword
-        ? "Login successful! (Remembered)"
-        : "Login successful!"
-    );
-
-    router.push("/admin/dashboard");
   };
 
   // UPDATED FORGOT PIN
@@ -134,9 +144,19 @@ export default function Index() {
               </View>
 
               {/* Login Button */}
-              <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                <Ionicons name="log-in-outline" size={20} color="#fff" />
-                <Text style={styles.buttonText}>SIGN IN</Text>
+              <TouchableOpacity 
+                style={[styles.button, isLoading && styles.buttonDisabled]} 
+                onPress={handleLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="log-in-outline" size={20} color="#fff" />
+                    <Text style={styles.buttonText}>SIGN IN</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </SafeAreaView>
@@ -274,6 +294,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
     elevation: 5,
+  },
+  buttonDisabled: {
+    backgroundColor: "#64748b",
+    opacity: 0.6,
   },
   buttonText: {
     color: "#fff",
