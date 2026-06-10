@@ -65,3 +65,54 @@ export async function getUserLogbooks(token: string): Promise<any[]> {
 
   return json;
 }
+
+export async function getAdminLogbooks(): Promise<any[]> {
+  if (!BASE_URL) {
+    throw new Error("API base URL is not configured");
+  }
+
+  const response = await fetch(`${BASE_URL}/api/logbooks`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  const json = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(json?.message || "Failed to fetch admin logbooks");
+  }
+
+  return json;
+}
+
+export async function getAdminLogsByStatus(status: string): Promise<any[]> {
+  const logs = await getAdminLogbooks();
+  return logs.filter(
+    (log) => typeof log.status === "string" && log.status.toLowerCase() === status.toLowerCase()
+  );
+}
+
+export async function getAdminLogbookStats(): Promise<{
+  approved: number;
+  pending: number;
+  done: number;
+  rejected: number;
+}> {
+  const logs = await getAdminLogbooks();
+
+  return logs.reduce(
+    (acc, log) => {
+      const status = typeof log.status === "string" ? log.status.toLowerCase() : "";
+
+      if (status === "approved") acc.approved += 1;
+      if (status === "pending") acc.pending += 1;
+      if (status === "done") acc.done += 1;
+      if (status === "rejected") acc.rejected += 1;
+
+      return acc;
+    },
+    { approved: 0, pending: 0, done: 0, rejected: 0 }
+  );
+}
