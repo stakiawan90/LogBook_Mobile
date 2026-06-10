@@ -107,3 +107,78 @@ export async function logout(token: string): Promise<{ status: boolean; message:
 
   return json;
 }
+
+export async function sendPasswordVerification(
+  token: string,
+  channel: "email" | "phone" = "email",
+  destination: string
+): Promise<{ status: boolean; message: string }> {
+  if (!BASE_URL) {
+    throw new Error("API base URL is not configured");
+  }
+
+  if (!token) {
+    throw new Error("Authentication token is required");
+  }
+
+  const response = await fetch(`${BASE_URL}/api/password/send-verification`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ channel, destination }),
+  });
+
+  const json = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(json?.message || "Unable to send verification code");
+  }
+
+  return json;
+}
+
+export async function changePasswordWithVerification(
+  token: string,
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword: string,
+  verificationCode: string,
+  channel: "email" | "phone" = "email",
+  destination: string
+): Promise<{ status: boolean; message: string }> {
+  if (!BASE_URL) {
+    throw new Error("API base URL is not configured");
+  }
+
+  if (!token) {
+    throw new Error("Authentication token is required");
+  }
+
+  const response = await fetch(`${BASE_URL}/api/password/update-with-verification`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      channel,
+      destination,
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password_confirmation: confirmPassword,
+      verification_code: verificationCode,
+    }),
+  });
+
+  const json = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(json?.message || "Unable to change password");
+  }
+
+  return json;
+}

@@ -1,20 +1,15 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+﻿import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Platform, View } from 'react-native';
+import { Platform } from 'react-native';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ThemeProvider as AppThemeProvider, useAppTheme } from '@/context/ThemeContext';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
- 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function LayoutContent() {
+  const { effectiveScheme } = useAppTheme();
 
-  // Custom themes with better colors
   const customDarkTheme = {
     ...DarkTheme,
     colors: {
@@ -41,43 +36,41 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? customDarkTheme : customLightTheme}>
-        <Stack 
-          screenOptions={{ 
+      <ThemeProvider
+        value={effectiveScheme === 'dark' ? customDarkTheme : customLightTheme}
+      >
+        <Stack
+          screenOptions={{
             headerShown: false,
-            contentStyle: { 
+            contentStyle: {
               flex: 1,
-              backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
+              backgroundColor: effectiveScheme === 'dark' ? '#000000' : '#ffffff',
             },
-            // Add smooth transitions
             animation: Platform.OS === 'ios' ? 'default' : 'fade_from_bottom',
           }}
         >
-          <Stack.Screen 
-            name="(tabs)" 
-            options={{ 
+          <Stack.Screen
+            name="index"
+            options={{
               headerShown: false,
-              contentStyle: { 
+              contentStyle: {
                 flex: 1,
-                backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
+                backgroundColor: effectiveScheme === 'dark' ? '#000000' : '#ffffff',
               },
-            }} 
+            }}
           />
-          <Stack.Screen 
-            name="modal" 
-            options={{ 
-              presentation: 'modal', 
-              headerShown: false,
-              contentStyle: { 
-                flex: 1,
-                backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
-              },
-              animation: 'slide_from_bottom',
-            }} 
-          />
+          {/* Removed unused modal screen since no `modal` route exists */}
         </Stack>
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        <StatusBar style={effectiveScheme === 'dark' ? 'light' : 'dark'} />
       </ThemeProvider>
     </SafeAreaProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AppThemeProvider>
+      <LayoutContent />
+    </AppThemeProvider>
   );
 }

@@ -1,5 +1,5 @@
 // app/staff/dashboard.tsx
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   StyleSheet,
   Text,
@@ -8,13 +8,15 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAppTheme } from '@/context/ThemeContext';
+import { getAdminLogbookStats } from '@/Api/logbook';
 
 type DashboardStats = {
-  totalUsers: number;
-  activeOrders: number;
+  approved: number;
+  pending: number;
   done: number;
-  pendingApprovals: number;
+  rejected: number;
 };
 
 type ActivityType = {
@@ -26,13 +28,26 @@ type ActivityType = {
 
 export default function StaffDashboard() {
   const router = useRouter();
+  const { token, name } = useLocalSearchParams();
+  const authToken = typeof token === "string" ? token : "";
+  const staffName = typeof name === "string" ? name : "Staff User";
+  const isDarkTheme = false;
 
-  const [stats] = useState<DashboardStats>({
-    totalUsers: 117,
-    activeOrders: 43,
-    done: 280,
-    pendingApprovals: 28,
+  const backgroundColor = "#f5f5f5";
+  const surfaceColor = "#fff";
+  const cardColor = "#fff";
+  const sectionColor = "#fff";
+  const textColor = "#666";
+  const titleColor = "#333";
+  const borderColor = "#e2e8f0";
+
+  const [stats, setStats] = useState<DashboardStats>({
+    approved: 0,
+    pending: 0,
+    done: 0,
+    rejected: 0,
   });
+  const [loadingStats, setLoadingStats] = useState(true);
 
   const [recentActivities] = useState<ActivityType[]>([
     {
@@ -74,6 +89,25 @@ export default function StaffDashboard() {
     ]);
   };
 
+  useEffect(() => {
+    async function loadStats() {
+      setLoadingStats(true);
+      try {
+        const fetchedStats = await getAdminLogbookStats();
+        setStats(fetchedStats);
+      } catch (error: any) {
+        Alert.alert(
+          "Unable to load dashboard",
+          error?.message || "Please check your connection and try again."
+        );
+      } finally {
+        setLoadingStats(false);
+      }
+    }
+
+    loadStats();
+  }, []);
+
   const StatCard = ({
     title,
     value,
@@ -88,18 +122,18 @@ export default function StaffDashboard() {
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
-      style={[styles.statCard, { borderLeftColor: color }]}
+      style={[styles.statCard, { borderLeftColor: color, backgroundColor: cardColor, borderColor }]}
     >
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statTitle}>{title}</Text>
+      <Text style={[styles.statValue, { color: titleColor }]}>{value}</Text>
+      <Text style={[styles.statTitle, { color: textColor }]}>{title}</Text>
     </TouchableOpacity>
   );
 
   const ActivityCard = ({ item }: { item: ActivityType }) => (
-    <View style={styles.activityItem}>
+    <View style={[styles.activityItem, { backgroundColor: cardColor, borderBottomColor: borderColor }]}> 
       <View style={styles.activityContent}>
-        <Text style={styles.activityTitle}>{item.title}</Text>
-        <Text style={styles.activityTime}>{item.time}</Text>
+        <Text style={[styles.activityTitle, { color: titleColor }]}>{item.title}</Text>
+        <Text style={[styles.activityTime, { color: textColor }]}>{item.time}</Text>
       </View>
 
       <View
@@ -116,12 +150,12 @@ export default function StaffDashboard() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor }]}> 
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: surfaceColor, borderBottomColor: borderColor }]}> 
         <View>
-          <Text style={styles.welcomeText}>Welcome back,</Text>
-          <Text style={styles.staffName}>Staff User</Text>
+          <Text style={[styles.welcomeText, { color: textColor }]}>Welcome back,</Text>
+          <Text style={[styles.staffName, { color: titleColor }]}>{staffName}</Text>
         </View>
 
         <TouchableOpacity
@@ -136,65 +170,37 @@ export default function StaffDashboard() {
         <View style={styles.statsGrid}>
           <StatCard
             title="Approved"
-            value={stats.totalUsers}
+            value={loadingStats ? "..." : stats.approved}
             color="#4CAF50"
-            onPress={() => router.push("/staff/approved")}
+            onPress={() => router.push("/admin/approved")}
           />
 
           <StatCard
             title="Done"
-            value={stats.done}
+            value={loadingStats ? "..." : stats.done}
             color="#2196F3"
-            onPress={() => router.push("/staff/done")}
+            onPress={() => router.push("/admin/done")}
           />
 
           <StatCard
             title="Pending"
-            value={stats.pendingApprovals}
+            value={loadingStats ? "..." : stats.pending}
             color="#FF9800"
-            onPress={() => router.push("/staff/pending")}
+            onPress={() => router.push("/admin/pending")}
           />
 
           <StatCard
             title="Rejected"
-            value={stats.totalUsers}
+            value={loadingStats ? "..." : stats.rejected}
             color="#F44336"
-            onPress={() => router.push("/staff/rejected")}
+            onPress={() => router.push("/admin/rejected")}
           />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={[styles.section, { backgroundColor: sectionColor, borderColor }]}> 
+          <Text style={[styles.sectionTitle, { color: titleColor }]}>Recent History</Text>
 
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() =>
-                Alert.alert("Requests", "Manage Requests")
-              }
-            >
-              <Text style={styles.actionIcon}>📋</Text>
-              <Text style={styles.actionText}>
-                Manage Requests
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => Alert.alert("Settings")}
-            >
-              <Text style={styles.actionIcon}>⚙️</Text>
-              <Text style={styles.actionText}>Settings</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Recent History
-          </Text>
-
-          <View style={styles.activitiesList}>
+          <View style={[styles.activitiesList, { backgroundColor: cardColor, borderColor }]}> 
             {recentActivities.map((item) => (
               <ActivityCard key={item.id} item={item} />
             ))}
@@ -210,18 +216,25 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: "#fff",
-    padding: 20,
-    paddingTop: 60,
+    padding: 24,
+    paddingTop: 64,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
 
-  welcomeText: { fontSize: 14, color: "#666" },
+  welcomeText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#6b7280",
+    letterSpacing: 0.5,
+  },
   staffName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#111827",
+    marginTop: 4,
+    lineHeight: 38,
   },
 
   logoutButton: {
@@ -274,7 +287,6 @@ const styles = StyleSheet.create({
 
   actionIcon: { fontSize: 28 },
   actionText: { marginTop: 5 },
-
   activitiesList: {
     backgroundColor: "#fff",
     borderRadius: 10,

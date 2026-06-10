@@ -1,79 +1,95 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TextInput,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
+import { SafeAreaView as RNSSafeAreaView } from 'react-native-safe-area-context';
+import { useAppTheme } from '@/context/ThemeContext';
+import { getAdminLogsByStatus } from '@/Api/logbook';
 
 export default function Approved() {
   const [search, setSearch] = useState("");
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { effectiveScheme } = useAppTheme();
+  const isDarkTheme = effectiveScheme === "dark";
 
-  // SAMPLE DATA (replace with API later)
-  const approvedLogs = [
-    {
-      id: 1,
-      name: "Juan Dela Cruz",
-      address: "Cebu City",
-      contact: "09123456789",
-      activity: "Dock Inspection",
-      time_in: "08:30 AM",
-      status: "Approved",
-    },
-    {
-      id: 2,
-      name: "Maria Santos",
-      address: "Iloilo",
-      contact: "09987654321",
-      activity: "Cargo Checking",
-      time_in: "09:15 AM",
-      status: "Approved",
-    },
-  ];
+  const containerBg = isDarkTheme ? "#020617" : "#f1f5f9";
+  const cardBg = isDarkTheme ? "#111827" : "#fff";
+  const textColor = isDarkTheme ? "#e5e7eb" : "#374151";
+  const titleColor = isDarkTheme ? "#f8fafc" : "#1e3a8a";
+  const borderColor = isDarkTheme ? "#334155" : "#e5e7eb";
+  const placeholderColor = isDarkTheme ? "#94a3b8" : "#94a3b8";
+
+  useEffect(() => {
+    async function loadApprovedLogs() {
+      setLoading(true);
+      try {
+        const fetchedLogs = await getAdminLogsByStatus("approved");
+        setLogs(fetchedLogs);
+      } catch (error: any) {
+        Alert.alert("Unable to load approved logs", error?.message || "Please check your connection.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadApprovedLogs();
+  }, []);
 
   // 🔍 SEARCH FILTER
-  const filteredLogs = approvedLogs.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase())
+  const filteredLogs = logs.filter((item) =>
+    (item.user?.name ?? item.name ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Approved Logbook</Text>
+    <RNSSafeAreaView style={[styles.container, { backgroundColor: containerBg }]}> 
+      <Text style={[styles.title, { color: titleColor }]}>Approved Logbook</Text>
 
       {/* 🔍 SEARCH BAR */}
       <TextInput
-        style={styles.search}
+        style={[styles.search, { backgroundColor: cardBg, borderColor, color: textColor }]}
         placeholder="Search name..."
+        placeholderTextColor={placeholderColor}
         value={search}
         onChangeText={setSearch}
       />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {filteredLogs.map((item) => (
-          <View key={item.id} style={styles.card}>
-            {/* NAME */}
-            <Text style={styles.name}>{item.name}</Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0a7ea4" />
+        </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {filteredLogs.map((item) => (
+            <View key={item.id} style={[styles.card, { backgroundColor: cardBg, borderColor }]}> 
+              {/* NAME */}
+              <Text style={[styles.name, { color: titleColor }]}>{item.user?.name ?? item.name ?? "Unknown"}</Text>
 
-            {/* DETAILS */}
-            <Text style={styles.text}>📍 {item.address}</Text>
-            <Text style={styles.text}>📞 {item.contact}</Text>
-            <Text style={styles.text}>📋 {item.activity}</Text>
+              {/* DETAILS */}
+              <Text style={[styles.text, { color: textColor }]}>📍 {item.address}</Text>
+              <Text style={[styles.text, { color: textColor }]}>📞 {item.contact_number ?? item.contact ?? "-"}</Text>
+              <Text style={[styles.text, { color: textColor }]}>📋 {item.activity}</Text>
 
-            {/* TIME */}
-            <View style={styles.row}>
-              <Text style={styles.time}>Time In: {item.time_in}</Text>
+              {/* TIME */}
+              <View style={styles.row}>
+                <Text style={styles.time}>Time In: {item.time_in}</Text>
+              </View>
+
+              {/* STATUS */}
+              <View style={styles.statusBox}>
+                <Text style={styles.statusText}>{item.status}</Text>
+              </View>
             </View>
-
-            {/* STATUS */}
-            <View style={styles.statusBox}>
-              <Text style={styles.statusText}>{item.status}</Text>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
-    </SafeAreaView>
+          ))}
+        </ScrollView>
+      )}
+    </RNSSafeAreaView>
   );
 }
 
@@ -99,6 +115,12 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: "#e5e7eb",
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
   },
 
   card: {

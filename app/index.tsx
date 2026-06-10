@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   TouchableOpacity,
   Alert,
@@ -13,6 +12,7 @@ import {
   Keyboard,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { login } from "../Api/auth";
@@ -42,7 +42,9 @@ export default function Index() {
 
         const role = response.role?.toLowerCase() || "user";
         if (role === "admin" || role === "staff") {
-          router.push("/admin/dashboard");
+          const token = encodeURIComponent(response.token);
+          const name = encodeURIComponent(response.user.name);
+          router.push(`/admin/dashboard?token=${token}&name=${name}`);
         } else {
           const token = encodeURIComponent(response.token);
           const name = encodeURIComponent(response.user.name);
@@ -101,9 +103,7 @@ export default function Index() {
               <View style={styles.passwordHeader}>
                 <Text style={styles.label}>PASSWORD</Text>
 
-                <TouchableOpacity onPress={handleForgotPassword}>
-                  <Text style={styles.forgot}>FORGOT PIN?</Text>
-                </TouchableOpacity>
+                
               </View>
 
               <View style={styles.inputContainer}>
