@@ -13,9 +13,9 @@ import { useAppTheme } from '@/context/ThemeContext';
 import { getAdminLogbookStats } from '@/Api/logbook';
 
 type DashboardStats = {
-  approved: number;
   pending: number;
   done: number;
+  completed: number;
   rejected: number;
 };
 
@@ -42,9 +42,9 @@ export default function StaffDashboard() {
   const borderColor = "#e2e8f0";
 
   const [stats, setStats] = useState<DashboardStats>({
-    approved: 0,
     pending: 0,
     done: 0,
+    completed: 0,
     rejected: 0,
   });
   const [loadingStats, setLoadingStats] = useState(true);
@@ -169,10 +169,10 @@ export default function StaffDashboard() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.statsGrid}>
           <StatCard
-            title="Approved"
-            value={loadingStats ? "..." : stats.approved}
-            color="#4CAF50"
-            onPress={() => router.push("/admin/approved")}
+            title="Pending"
+            value={loadingStats ? "..." : stats.pending}
+            color="#FF9800"
+            onPress={() => router.push("/admin/pending")}
           />
 
           <StatCard
@@ -183,10 +183,10 @@ export default function StaffDashboard() {
           />
 
           <StatCard
-            title="Pending"
-            value={loadingStats ? "..." : stats.pending}
-            color="#FF9800"
-            onPress={() => router.push("/admin/pending")}
+            title="Completed"
+            value={loadingStats ? "..." : stats.completed}
+            color="#4CAF50"
+            onPress={() => router.push("/admin/completed")}
           />
 
           <StatCard
@@ -195,6 +195,16 @@ export default function StaffDashboard() {
             color="#F44336"
             onPress={() => router.push("/admin/rejected")}
           />
+        </View>
+
+        <View style={[styles.scanSection, { backgroundColor: sectionColor, borderColor }]}> 
+          <Text style={[styles.sectionTitle, { color: titleColor }]}>Staff Actions</Text>
+          <TouchableOpacity
+            style={[styles.scanButton, { backgroundColor: '#2563eb' }]}
+            onPress={() => router.push('/admin/scanner')}
+          >
+            <Text style={styles.scanButtonText}>Open QR Scanner</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={[styles.section, { backgroundColor: sectionColor, borderColor }]}> 
@@ -287,6 +297,23 @@ const styles = StyleSheet.create({
 
   actionIcon: { fontSize: 28 },
   actionText: { marginTop: 5 },
+  scanSection: {
+    marginHorizontal: 15,
+    marginBottom: 18,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  scanButton: {
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  scanButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
   activitiesList: {
     backgroundColor: "#fff",
     borderRadius: 10,

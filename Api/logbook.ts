@@ -1,18 +1,34 @@
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
-interface LogbookPayload {
-  date: string;
-  activity: string;
+export interface BookingPayload {
+  booking_date: string;
+  booking_time: string;
+  purpose: string;
   address: string;
   contact_number: string;
-  time_in?: string;
-  time_out?: string;
 }
 
-export async function createLogbook(
+export interface Booking {
+  id?: number;
+  qr_code?: string;
+  user_id?: number;
+  purpose?: string;
+  booking_date?: string;
+  booking_time?: string;
+  address?: string;
+  contact_number?: string;
+  status?: string;
+  time_in?: string;
+  time_out?: string;
+  user?: {
+    name?: string;
+  };
+}
+
+export async function createBooking(
   token: string,
-  payload: LogbookPayload
-): Promise<{ status: boolean; message: string }> {
+  payload: BookingPayload
+): Promise<{ status: boolean; message: string; data?: Booking }> {
   if (!BASE_URL) {
     throw new Error("API base URL is not configured");
   }
@@ -35,6 +51,73 @@ export async function createLogbook(
 
   if (!response.ok) {
     throw new Error(json?.message || "Failed to create booking");
+  }
+
+  return json;
+}
+
+export async function getBookingByQr(qrCode: string): Promise<{ status: boolean; data?: Booking; message?: string }> {
+  if (!BASE_URL) {
+    throw new Error("API base URL is not configured");
+  }
+
+  const response = await fetch(`${BASE_URL}/api/logbooks/qr/${encodeURIComponent(qrCode)}`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  const json = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(json?.message || "Failed to fetch booking by QR");
+  }
+
+  return json;
+}
+
+export async function scanBooking(qrCode: string): Promise<{ status: boolean; data?: Booking; message?: string }> {
+  if (!BASE_URL) {
+    throw new Error("API base URL is not configured");
+  }
+
+  const response = await fetch(`${BASE_URL}/api/logbooks/scan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ qr_code: qrCode }),
+  });
+
+  const json = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(json?.message || "Failed to scan booking");
+  }
+
+  return json;
+}
+
+export async function updateBookingStatus(id: number, status: string): Promise<{ status: boolean; message: string; data?: Booking }> {
+  if (!BASE_URL) {
+    throw new Error("API base URL is not configured");
+  }
+
+  const response = await fetch(`${BASE_URL}/api/logbooks/${id}/status`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  const json = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(json?.message || "Failed to update booking status");
   }
 
   return json;
@@ -95,9 +178,9 @@ export async function getAdminLogsByStatus(status: string): Promise<any[]> {
 }
 
 export async function getAdminLogbookStats(): Promise<{
-  approved: number;
   pending: number;
   done: number;
+  completed: number;
   rejected: number;
 }> {
   const logs = await getAdminLogbooks();
@@ -106,13 +189,13 @@ export async function getAdminLogbookStats(): Promise<{
     (acc, log) => {
       const status = typeof log.status === "string" ? log.status.toLowerCase() : "";
 
-      if (status === "approved") acc.approved += 1;
       if (status === "pending") acc.pending += 1;
       if (status === "done") acc.done += 1;
+      if (status === "completed") acc.completed += 1;
       if (status === "rejected") acc.rejected += 1;
 
       return acc;
     },
-    { approved: 0, pending: 0, done: 0, rejected: 0 }
+    { pending: 0, done: 0, completed: 0, rejected: 0 }
   );
 }
