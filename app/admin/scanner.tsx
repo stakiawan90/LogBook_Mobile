@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from "react-native";
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import { useRouter } from "expo-router";
 import { scanBooking, updateBookingStatus } from "@/Api/logbook";
@@ -23,7 +23,11 @@ export default function Scanner() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [lastResult, setLastResult] = useState<Booking | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const currentStatus = lastResult?.status?.toLowerCase();
+  const hasResult = !!lastResult;
+  const hasScanOutcome = hasResult || !!scanError;
 
   const handleScanQr = async (qrCode: string) => {
     if (!qrCode.trim() || scanned || loading) {
@@ -37,18 +41,20 @@ export default function Scanner() {
       const response = await scanBooking(qrCode.trim());
 
       if (response.status) {
+        setScanError(null);
         setLastResult(response.data ?? null);
         Alert.alert("Scan successful", response.message || "Booking scanned successfully.");
       } else {
         setLastResult(null);
+        setScanError(response.message || "Unable to process this QR code.");
         Alert.alert("Scan error", response.message || "Unable to process this QR code.");
       }
     } catch (error: any) {
       setLastResult(null);
+      setScanError(error.message || "Unable to process QR code.");
       Alert.alert("Scan failed", error.message || "Unable to process QR code.");
     } finally {
       setLoading(false);
-      setTimeout(() => setScanned(false), 2000);
     }
   };
 
@@ -77,8 +83,36 @@ export default function Scanner() {
     }
   };
 
+  const handleCompleteBooking = async () => {
+    if (!lastResult?.qr_code) {
+      Alert.alert("Missing QR code", "Unable to complete this booking without its QR code.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await scanBooking(lastResult.qr_code);
+      if (response.status) {
+        Alert.alert("Success", response.message || "Booking completed.");
+        setLastResult(response.data ?? null);
+      } else {
+        Alert.alert("Error", response.message || "Unable to complete booking.");
+      }
+    } catch (error: any) {
+      Alert.alert("Update failed", error.message || "Unable to complete booking.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleScanAnother = () => {
+    setLastResult(null);
+    setScanError(null);
+    setScanned(false);
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Staff QR Scanner</Text>
       <Text style={styles.subtitle}>Point the camera at a booking QR code</Text>
 
@@ -99,11 +133,13 @@ export default function Scanner() {
             style={styles.camera}
             facing="back"
             barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-            onBarcodeScanned={scanned || loading ? undefined : handleBarcodeScanned}
+            onBarcodeScanned={scanned || loading || hasScanOutcome ? undefined : handleBarcodeScanned}
           >
             <View style={styles.scanOverlay}>
               <View style={styles.scanFrame} />
-              <Text style={styles.scanHint}>{loading ? "Scanning..." : "Scan QR code"}</Text>
+              <Text style={styles.scanHint}>
+                {loading ? "Scanning..." : hasScanOutcome ? "QR scanned" : "Scan QR code"}
+              </Text>
             </View>
           </CameraView>
         )}
@@ -127,36 +163,79 @@ export default function Scanner() {
           {lastResult.time_in ? <Text style={styles.detail}>Time In: {lastResult.time_in}</Text> : null}
           {lastResult.time_out ? <Text style={styles.detail}>Time Out: {lastResult.time_out}</Text> : null}
 
-          {lastResult.status === "pending" ? (
+          {currentStatus === "pending" ? (
             <View style={styles.buttonRow}>
               <TouchableOpacity
-                style={[styles.actionButton, styles.doneButton]}
-                onPress={() => handleUpdateStatus(lastResult.id, "done")}
+                style={[styles.actionButton, styles.approveButton]}
+                onPress={() => handleUpdateStatus(lastResult.id, "approved")}
+                disabled={loading}
               >
-                <Text style={styles.actionText}>Done</Text>
+                <Text style={styles.actionText}>Approve</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, styles.rejectButton]}
                 onPress={() => handleUpdateStatus(lastResult.id, "rejected")}
+                disabled={loading}
               >
                 <Text style={styles.actionText}>Reject</Text>
               </TouchableOpacity>
             </View>
           ) : null}
+
+          {currentStatus === "approved" ? (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.doneButton, styles.singleActionButton]}
+              onPress={() => handleUpdateStatus(lastResult.id, "done")}
+              disabled={loading}
+            >
+              <Text style={styles.actionText}>Mark as Done</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {currentStatus === "done" ? (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.completeButton, styles.singleActionButton]}
+              onPress={handleCompleteBooking}
+              disabled={loading}
+            >
+              <Text style={styles.actionText}>Complete / Time Out</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {currentStatus === "completed" || currentStatus === "rejected" ? (
+            <Text style={styles.noActionText}>No further action available.</Text>
+          ) : null}
+
+          <TouchableOpacity style={[styles.button, styles.scanAgainButton]} onPress={handleScanAnother} disabled={loading}>
+            <Text style={styles.buttonText}>Scan another QR</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+      {scanError ? (
+        <View style={styles.resultCard}>
+          <Text style={styles.label}>Scan Result</Text>
+          <Text style={styles.errorText}>{scanError}</Text>
+          <TouchableOpacity style={[styles.button, styles.scanAgainButton]} onPress={handleScanAnother} disabled={loading}>
+            <Text style={styles.buttonText}>Scan another QR</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
       <TouchableOpacity style={styles.button} onPress={() => router.back()}>
         <Text style={styles.buttonText}>Back</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#0f172a",
+  },
+  content: {
     padding: 24,
     backgroundColor: "#0f172a",
+    paddingBottom: 36,
   },
   title: {
     color: "#fff",
@@ -256,14 +335,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 4,
   },
-  doneButton: {
+  approveButton: {
     backgroundColor: "#16a34a",
+  },
+  doneButton: {
+    backgroundColor: "#2563eb",
+  },
+  completeButton: {
+    backgroundColor: "#7c3aed",
   },
   rejectButton: {
     backgroundColor: "#dc2626",
   },
+  singleActionButton: {
+    marginHorizontal: 0,
+    marginTop: 16,
+  },
   actionText: {
     color: "#fff",
+    fontWeight: "700",
+  },
+  noActionText: {
+    color: "#cbd5e1",
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 16,
+    textAlign: "center",
+  },
+  scanAgainButton: {
+    marginTop: 16,
+    backgroundColor: "#475569",
+  },
+  errorText: {
+    color: "#fecaca",
+    fontSize: 16,
     fontWeight: "700",
   },
   emptyText: {
