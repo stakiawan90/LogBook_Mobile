@@ -93,8 +93,6 @@ export default function UserQr() {
               <Text style={styles.value}>{booking.purpose}</Text>
               <Text style={styles.label}>Date</Text>
               <Text style={styles.value}>{booking.booking_date}</Text>
-              <Text style={styles.label}>Time</Text>
-              <Text style={styles.value}>{booking.booking_time}</Text>
               <Text style={styles.label}>Status</Text>
               <Text style={styles.status}>{booking.status}</Text>
               {booking.time_in ? (

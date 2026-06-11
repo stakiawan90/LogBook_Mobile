@@ -1,9 +1,8 @@
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
 export interface BookingPayload {
-  booking_date: string;
-  booking_time: string;
-  purpose: string;
+  date: string;
+  activity: string;
   address: string;
   contact_number: string;
 }
@@ -22,6 +21,17 @@ export interface Booking {
   time_out?: string;
   user?: {
     name?: string;
+  };
+  date?: string;
+  activity?: string;
+}
+
+function normalizeBooking(logbook: any): Booking {
+  return {
+    ...logbook,
+    booking_date: logbook?.booking_date ?? logbook?.date,
+    booking_time: logbook?.booking_time ?? logbook?.time_in,
+    purpose: logbook?.purpose ?? logbook?.activity,
   };
 }
 
@@ -53,7 +63,10 @@ export async function createBooking(
     throw new Error(json?.message || "Failed to create booking");
   }
 
-  return json;
+  return {
+    ...json,
+    data: json?.data ? normalizeBooking(json.data) : undefined,
+  };
 }
 
 export async function getBookingByQr(qrCode: string): Promise<{ status: boolean; data?: Booking; message?: string }> {
@@ -74,7 +87,10 @@ export async function getBookingByQr(qrCode: string): Promise<{ status: boolean;
     throw new Error(json?.message || "Failed to fetch booking by QR");
   }
 
-  return json;
+  return {
+    ...json,
+    data: json?.data ? normalizeBooking(json.data) : undefined,
+  };
 }
 
 export async function scanBooking(qrCode: string): Promise<{ status: boolean; data?: Booking; message?: string }> {
@@ -97,7 +113,10 @@ export async function scanBooking(qrCode: string): Promise<{ status: boolean; da
     throw new Error(json?.message || "Failed to scan booking");
   }
 
-  return json;
+  return {
+    ...json,
+    data: json?.data ? normalizeBooking(json.data) : undefined,
+  };
 }
 
 export async function updateBookingStatus(id: number, status: string): Promise<{ status: boolean; message: string; data?: Booking }> {
@@ -117,10 +136,13 @@ export async function updateBookingStatus(id: number, status: string): Promise<{
   const json = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(json?.message || "Failed to update booking status");
+    throw new Error(json?.message || json?.error || "Failed to update booking status");
   }
 
-  return json;
+  return {
+    ...json,
+    data: json?.data ? normalizeBooking(json.data) : undefined,
+  };
 }
 
 export async function getUserLogbooks(token: string): Promise<any[]> {
@@ -146,7 +168,9 @@ export async function getUserLogbooks(token: string): Promise<any[]> {
     throw new Error(json?.message || "Failed to fetch bookings");
   }
 
-  return json;
+  const logbooks = Array.isArray(json) ? json : json?.data;
+
+  return Array.isArray(logbooks) ? logbooks.map(normalizeBooking) : [];
 }
 
 export async function getAdminLogbooks(): Promise<any[]> {
