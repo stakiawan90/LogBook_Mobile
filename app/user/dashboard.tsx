@@ -15,6 +15,7 @@ import { createBooking, getUserLogbooks } from "../../Api/logbook";
 type Booking = {
   id?: number;
   qr_code?: string;
+  qrCode?: string;
   booking_date: string;
   booking_time: string;
   purpose: string;
@@ -48,7 +49,8 @@ export default function UserDashboard() {
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
 
-  const latestBooking = bookings[0];
+  const getQrCode = (booking?: Booking) => booking?.qr_code || booking?.qrCode || "";
+  const latestQrBooking = bookings.find((booking) => Boolean(getQrCode(booking)));
 
   useEffect(() => {
     if (authToken) {
@@ -123,6 +125,28 @@ if (!date || !time.trim() || !purpose.trim() || !address.trim() || !contactNumbe
     }
   };
 
+  const openQrCode = (booking?: Booking) => {
+    const qrCode = getQrCode(booking);
+
+    if (!booking) {
+      Alert.alert("No booking", "Please create a booking first.");
+      return;
+    }
+
+    if (!qrCode) {
+      Alert.alert("No QR code", "This booking does not have a QR code yet.");
+      return;
+    }
+
+    router.push(
+      `/user/qr?qrCode=${encodeURIComponent(
+        qrCode
+      )}&token=${encodeURIComponent(authToken)}&name=${encodeURIComponent(
+        userName
+      )}`
+    );
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -141,21 +165,8 @@ if (!date || !time.trim() || !purpose.trim() || !address.trim() || !contactNumbe
 
       <View style={styles.actionRow}>
         <TouchableOpacity
-          style={[
-            styles.secondaryButton,
-            !latestBooking?.qr_code && styles.secondaryButtonDisabled,
-          ]}
-          onPress={() =>
-            latestBooking?.qr_code &&
-            router.push(
-              `/user/qr?qrCode=${encodeURIComponent(
-                latestBooking.qr_code
-              )}&token=${encodeURIComponent(authToken)}&name=${encodeURIComponent(
-                userName
-              )}`
-            )
-          }
-          disabled={!latestBooking?.qr_code}
+          style={styles.secondaryButton}
+          onPress={() => openQrCode(latestQrBooking)}
         >
           <Text style={styles.secondaryButtonText}>My QR Code</Text>
         </TouchableOpacity>
@@ -234,7 +245,15 @@ if (!date || !time.trim() || !purpose.trim() || !address.trim() || !contactNumbe
           <Text style={styles.emptyText}>No bookings yet. Create one now.</Text>
         ) : (
           bookings.map((booking) => (
-            <View key={booking.id?.toString() ?? booking.booking_date} style={styles.bookingCard}>
+            <TouchableOpacity
+              key={booking.id?.toString() ?? booking.booking_date}
+              style={[
+                styles.bookingCard,
+                getQrCode(booking) && styles.bookingCardPressable,
+              ]}
+              onPress={() => openQrCode(booking)}
+              activeOpacity={0.85}
+            >
               <View style={styles.bookingRow}>
                 <Text style={styles.bookingLabel}>Date</Text>
                 <Text style={styles.bookingValue}>{booking.booking_date}</Text>
@@ -254,7 +273,10 @@ if (!date || !time.trim() || !purpose.trim() || !address.trim() || !contactNumbe
               <View style={styles.statusBadge}>
                 <Text style={styles.statusText}>{booking.status ?? "pending"}</Text>
               </View>
-            </View>
+              {getQrCode(booking) ? (
+                <Text style={styles.qrHint}>Tap to view QR code</Text>
+              ) : null}
+            </TouchableOpacity>
           ))
         )}
       </View>
@@ -365,6 +387,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#334155",
   },
+  bookingCardPressable: {
+    borderColor: "#3b82f6",
+  },
   bookingRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -391,5 +416,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 12,
+  },
+  qrHint: {
+    color: "#60a5fa",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 10,
   },
 });
