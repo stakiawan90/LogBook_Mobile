@@ -1,6 +1,7 @@
 // app/staff/dashboard.tsx
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -9,13 +10,12 @@ import {
   Alert,
 } from "react-native";
 import { useEffect, useState } from "react";
-import { useAppTheme } from '@/context/ThemeContext';
-import { getAdminLogbookStats } from '@/Api/logbook';
+import { getAdminLogbooks, type Booking } from '@/Api/logbook';
 
 type DashboardStats = {
   pending: number;
+  approved: number;
   done: number;
-  completed: number;
   rejected: number;
 };
 
@@ -23,15 +23,13 @@ type ActivityType = {
   id: string;
   title: string;
   time: string;
-  status: "pending" | "completed" | "cancelled";
+  status: string;
 };
 
 export default function StaffDashboard() {
   const router = useRouter();
-  const { token, name } = useLocalSearchParams();
-  const authToken = typeof token === "string" ? token : "";
+  const { name } = useLocalSearchParams();
   const staffName = typeof name === "string" ? name : "Staff User";
-  const isDarkTheme = false;
 
   const backgroundColor = "#f5f5f5";
   const surfaceColor = "#fff";
@@ -43,38 +41,12 @@ export default function StaffDashboard() {
 
   const [stats, setStats] = useState<DashboardStats>({
     pending: 0,
+    approved: 0,
     done: 0,
-    completed: 0,
     rejected: 0,
   });
   const [loadingStats, setLoadingStats] = useState(true);
-
-  const [recentActivities] = useState<ActivityType[]>([
-    {
-      id: "1",
-      title: "New request received",
-      time: "5 minutes ago",
-      status: "completed",
-    },
-    {
-      id: "2",
-      title: "Staff account updated",
-      time: "3 hours ago",
-      status: "completed",
-    },
-    {
-      id: "3",
-      title: "Notification sent",
-      time: "3 hours ago",
-      status: "completed",
-    },
-    {
-      id: "4",
-      title: "Pending approval",
-      time: "1 day ago",
-      status: "pending",
-    },
-  ]);
+  const [recentActivities, setRecentActivities] = useState<ActivityType[]>([]);
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to log out?", [
@@ -90,11 +62,26 @@ export default function StaffDashboard() {
   };
 
   useEffect(() => {
-    async function loadStats() {
+    async function loadDashboard() {
       setLoadingStats(true);
       try {
-        const fetchedStats = await getAdminLogbookStats();
-        setStats(fetchedStats);
+        const logs = await getAdminLogbooks();
+        const nextStats = logs.reduce(
+          (acc: DashboardStats, log: Booking) => {
+            const status = typeof log.status === "string" ? log.status.toLowerCase() : "";
+
+            if (status === "pending") acc.pending += 1;
+            if (status === "approved") acc.approved += 1;
+            if (status === "done" || status === "completed") acc.done += 1;
+            if (status === "rejected") acc.rejected += 1;
+
+            return acc;
+          },
+          { pending: 0, approved: 0, done: 0, rejected: 0 }
+        );
+
+        setStats(nextStats);
+        setRecentActivities(logs.slice(0, 5).map(mapLogToActivity));
       } catch (error: any) {
         Alert.alert(
           "Unable to load dashboard",
@@ -105,8 +92,47 @@ export default function StaffDashboard() {
       }
     }
 
-    loadStats();
+    loadDashboard();
   }, []);
+
+  const formatLogDate = (log: Booking) => {
+    const rawDate = (log as any).created_at ?? log.booking_date;
+
+    if (!rawDate) {
+      return "No date";
+    }
+
+    const date = new Date(rawDate);
+
+    if (Number.isNaN(date.getTime())) {
+      return String(rawDate);
+    }
+
+    return date.toLocaleString();
+  };
+
+  const mapLogToActivity = (log: Booking): ActivityType => {
+    const userName = log.user?.name ?? "Unknown user";
+    const purpose = log.purpose ?? (log as any).activity ?? "Logbook request";
+
+    return {
+      id: String(log.id ?? log.qr_code ?? `${userName}-${purpose}`),
+      title: `${userName} - ${purpose}`,
+      time: formatLogDate(log),
+      status: log.status ?? "pending",
+    };
+  };
+
+  const getStatusStyle = (status: string) => {
+    const normalized = status.toLowerCase();
+
+    if (normalized === "pending") return styles.statusPending;
+    if (normalized === "approved") return styles.statusApproved;
+    if (normalized === "done") return styles.statusDone;
+    if (normalized === "rejected") return styles.statusRejected;
+
+    return styles.statusCompleted;
+  };
 
   const StatCard = ({
     title,
@@ -139,9 +165,7 @@ export default function StaffDashboard() {
       <View
         style={[
           styles.statusBadge,
-          item.status === "completed" && styles.statusCompleted,
-          item.status === "pending" && styles.statusPending,
-          item.status === "cancelled" && styles.statusCancelled,
+          getStatusStyle(item.status),
         ]}
       >
         <Text style={styles.statusText}>{item.status}</Text>
@@ -176,17 +200,17 @@ export default function StaffDashboard() {
           />
 
           <StatCard
+            title="Approved"
+            value={loadingStats ? "..." : stats.approved}
+            color="#16a34a"
+            onPress={() => router.push("/admin/approved")}
+          />
+
+          <StatCard
             title="Done"
             value={loadingStats ? "..." : stats.done}
             color="#2196F3"
             onPress={() => router.push("/admin/done")}
-          />
-
-          <StatCard
-            title="Completed"
-            value={loadingStats ? "..." : stats.completed}
-            color="#4CAF50"
-            onPress={() => router.push("/admin/completed")}
           />
 
           <StatCard
@@ -211,9 +235,15 @@ export default function StaffDashboard() {
           <Text style={[styles.sectionTitle, { color: titleColor }]}>Recent History</Text>
 
           <View style={[styles.activitiesList, { backgroundColor: cardColor, borderColor }]}> 
-            {recentActivities.map((item) => (
-              <ActivityCard key={item.id} item={item} />
-            ))}
+            {loadingStats ? (
+              <ActivityIndicator size="small" color="#2563eb" style={styles.historyLoader} />
+            ) : recentActivities.length > 0 ? (
+              recentActivities.map((item) => (
+                <ActivityCard key={item.id} item={item} />
+              ))
+            ) : (
+              <Text style={[styles.emptyHistory, { color: textColor }]}>No recent history yet.</Text>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -343,14 +373,28 @@ const styles = StyleSheet.create({
   statusCompleted: {
     backgroundColor: "#4CAF50",
   },
+  statusApproved: {
+    backgroundColor: "#16a34a",
+  },
+  statusDone: {
+    backgroundColor: "#2196F3",
+  },
   statusPending: {
     backgroundColor: "#FF9800",
   },
-  statusCancelled: {
+  statusRejected: {
     backgroundColor: "#F44336",
   },
   statusText: {
     color: "#fff",
     fontSize: 12,
+  },
+  historyLoader: {
+    paddingVertical: 18,
+  },
+  emptyHistory: {
+    padding: 15,
+    fontSize: 14,
+    textAlign: "center",
   },
 });
