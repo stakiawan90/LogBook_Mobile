@@ -134,8 +134,6 @@ export default function Scanner() {
           <Text style={styles.value}>{lastResult.purpose}</Text>
           <Text style={styles.label}>Date</Text>
           <Text style={styles.value}>{lastResult.booking_date}</Text>
-          <Text style={styles.label}>Time</Text>
-          <Text style={styles.value}>{lastResult.booking_time}</Text>
           <Text style={styles.label}>Status</Text>
           <Text style={[styles.value, styles.statusValue]}>{lastResult.status}</Text>
           {lastResult.time_in ? <Text style={styles.detail}>Time In: {lastResult.time_in}</Text> : null}

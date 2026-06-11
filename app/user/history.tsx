@@ -51,7 +51,6 @@ export default function BookingHistory() {
             <View key={booking.id?.toString() ?? booking.booking_date} style={styles.card}>
               <Text style={styles.label}>{booking.purpose}</Text>
               <Text style={styles.text}>Date: {booking.booking_date}</Text>
-              <Text style={styles.text}>Time: {booking.booking_time}</Text>
               <Text style={styles.text}>Status: {booking.status}</Text>
               <Text style={styles.text}>Time In: {booking.time_in ?? '-'}</Text>
               <Text style={styles.text}>Time Out: {booking.time_out ?? '-'}</Text>

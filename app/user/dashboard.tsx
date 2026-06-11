@@ -17,7 +17,7 @@ type Booking = {
   qr_code?: string;
   qrCode?: string;
   booking_date: string;
-  booking_time: string;
+  booking_time?: string;
   purpose: string;
   address: string;
   contact_number: string;
@@ -34,13 +34,6 @@ export default function UserDashboard() {
 
   const [date, setDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
-  );
-  const [time, setTime] = useState<string>(
-    new Date().toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    })
   );
   const [purpose, setPurpose] = useState("");
   const [address, setAddress] = useState("");
@@ -77,7 +70,7 @@ export default function UserDashboard() {
       return;
     }
 
-if (!date || !time.trim() || !purpose.trim() || !address.trim() || !contactNumber.trim()) {
+    if (!date || !purpose.trim() || !address.trim() || !contactNumber.trim()) {
       Alert.alert("Validation Error", "All fields are required.");
       return;
     }
@@ -91,9 +84,8 @@ if (!date || !time.trim() || !purpose.trim() || !address.trim() || !contactNumbe
 
     try {
       const payload = {
-        booking_date: date,
-        booking_time: time,
-        purpose: purpose.trim(),
+        date,
+        activity: purpose.trim(),
         address: address.trim(),
         contact_number: contactNumber.trim(),
       };
@@ -105,8 +97,7 @@ if (!date || !time.trim() || !purpose.trim() || !address.trim() || !contactNumbe
           {
             id: response.data?.id ?? Date.now(),
             qr_code: response.data?.qr_code,
-            booking_date: date,
-            booking_time: time,
+            booking_date: response.data?.booking_date ?? date,
             purpose: purpose.trim(),
             address: address.trim(),
             contact_number: contactNumber.trim(),
@@ -196,13 +187,6 @@ if (!date || !time.trim() || !purpose.trim() || !address.trim() || !contactNumbe
         />
         <TextInput
           style={styles.input}
-          value={time}
-          onChangeText={setTime}
-          placeholder="HH:mm"
-          placeholderTextColor="#9ca3af"
-        />
-        <TextInput
-          style={styles.input}
           value={purpose}
           onChangeText={setPurpose}
           placeholder="Purpose"
@@ -257,10 +241,6 @@ if (!date || !time.trim() || !purpose.trim() || !address.trim() || !contactNumbe
               <View style={styles.bookingRow}>
                 <Text style={styles.bookingLabel}>Date</Text>
                 <Text style={styles.bookingValue}>{booking.booking_date}</Text>
-              </View>
-              <View style={styles.bookingRow}>
-                <Text style={styles.bookingLabel}>Time</Text>
-                <Text style={styles.bookingValue}>{booking.booking_time}</Text>
               </View>
               <View style={styles.bookingRow}>
                 <Text style={styles.bookingLabel}>Purpose</Text>
