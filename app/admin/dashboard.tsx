@@ -72,7 +72,7 @@ export default function StaffDashboard() {
 
             if (status === "pending") acc.pending += 1;
             if (status === "approved") acc.approved += 1;
-            if (status === "done" || status === "completed") acc.done += 1;
+            if (status === "done") acc.done += 1;
             if (status === "rejected") acc.rejected += 1;
 
             return acc;

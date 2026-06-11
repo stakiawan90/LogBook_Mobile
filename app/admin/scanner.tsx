@@ -83,28 +83,6 @@ export default function Scanner() {
     }
   };
 
-  const handleCompleteBooking = async () => {
-    if (!lastResult?.qr_code) {
-      Alert.alert("Missing QR code", "Unable to complete this booking without its QR code.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await scanBooking(lastResult.qr_code);
-      if (response.status) {
-        Alert.alert("Success", response.message || "Booking completed.");
-        setLastResult(response.data ?? null);
-      } else {
-        Alert.alert("Error", response.message || "Unable to complete booking.");
-      }
-    } catch (error: any) {
-      Alert.alert("Update failed", error.message || "Unable to complete booking.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleScanAnother = () => {
     setLastResult(null);
     setScanError(null);
@@ -192,17 +170,7 @@ export default function Scanner() {
             </TouchableOpacity>
           ) : null}
 
-          {currentStatus === "done" ? (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.completeButton, styles.singleActionButton]}
-              onPress={handleCompleteBooking}
-              disabled={loading}
-            >
-              <Text style={styles.actionText}>Complete / Time Out</Text>
-            </TouchableOpacity>
-          ) : null}
-
-          {currentStatus === "completed" || currentStatus === "rejected" ? (
+          {currentStatus === "done" || currentStatus === "rejected" ? (
             <Text style={styles.noActionText}>No further action available.</Text>
           ) : null}
 
@@ -340,9 +308,6 @@ const styles = StyleSheet.create({
   },
   doneButton: {
     backgroundColor: "#2563eb",
-  },
-  completeButton: {
-    backgroundColor: "#7c3aed",
   },
   rejectButton: {
     backgroundColor: "#dc2626",

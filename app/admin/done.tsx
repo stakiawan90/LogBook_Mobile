@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView as RNSSafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/context/ThemeContext';
-import { getAdminLogbooks } from '@/Api/logbook';
+import { getAdminLogsByStatus } from '@/Api/logbook';
 
 export default function Done() {
   const [search, setSearch] = useState("");
@@ -30,13 +30,8 @@ export default function Done() {
     async function loadDoneLogs() {
       setLoading(true);
       try {
-        const fetchedLogs = await getAdminLogbooks();
-        setLogs(
-          fetchedLogs.filter((item) => {
-            const status = typeof item.status === "string" ? item.status.toLowerCase() : "";
-            return status === "done" || status === "completed";
-          })
-        );
+        const fetchedLogs = await getAdminLogsByStatus("done");
+        setLogs(fetchedLogs);
       } catch (error: any) {
         Alert.alert("Unable to load done logs", error?.message || "Please check your connection.");
       } finally {
