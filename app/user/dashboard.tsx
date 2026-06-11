@@ -10,16 +10,19 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { createLogbook, getUserLogbooks } from "../../Api/logbook";
+import { createBooking, getUserLogbooks } from "../../Api/logbook";
 
 type Booking = {
   id?: number;
-  date: string;
-  activity: string;
+  qr_code?: string;
+  booking_date: string;
+  booking_time: string;
+  purpose: string;
   address: string;
   contact_number: string;
   status?: string;
   time_in?: string;
+  time_out?: string;
 };
 
 export default function UserDashboard() {
@@ -31,12 +34,21 @@ export default function UserDashboard() {
   const [date, setDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
   );
-  const [activity, setActivity] = useState("");
+  const [time, setTime] = useState<string>(
+    new Date().toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+  );
+  const [purpose, setPurpose] = useState("");
   const [address, setAddress] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
+
+  const latestBooking = bookings[0];
 
   useEffect(() => {
     if (authToken) {
@@ -63,7 +75,7 @@ export default function UserDashboard() {
       return;
     }
 
-    if (!date || !activity.trim() || !address.trim() || !contactNumber.trim()) {
+if (!date || !time.trim() || !purpose.trim() || !address.trim() || !contactNumber.trim()) {
       Alert.alert("Validation Error", "All fields are required.");
       return;
     }
@@ -77,29 +89,30 @@ export default function UserDashboard() {
 
     try {
       const payload = {
-        date,
-        activity: activity.trim(),
+        booking_date: date,
+        booking_time: time,
+        purpose: purpose.trim(),
         address: address.trim(),
         contact_number: contactNumber.trim(),
-        time_in: new Date().toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }),
       };
 
-      const response = await createLogbook(authToken, payload);
+      const response = await createBooking(authToken, payload);
       if (response.status) {
         Alert.alert("Booked", response.message || "Booking request sent successfully.");
         setBookings((current) => [
           {
-            ...payload,
+            id: response.data?.id ?? Date.now(),
+            qr_code: response.data?.qr_code,
+            booking_date: date,
+            booking_time: time,
+            purpose: purpose.trim(),
+            address: address.trim(),
+            contact_number: contactNumber.trim(),
             status: "pending",
-            id: Date.now(),
           },
           ...current,
         ]);
-        setActivity("");
+        setPurpose("");
         setAddress("");
         setContactNumber("");
       }
@@ -126,6 +139,41 @@ export default function UserDashboard() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={[
+            styles.secondaryButton,
+            !latestBooking?.qr_code && styles.secondaryButtonDisabled,
+          ]}
+          onPress={() =>
+            latestBooking?.qr_code &&
+            router.push(
+              `/user/qr?qrCode=${encodeURIComponent(
+                latestBooking.qr_code
+              )}&token=${encodeURIComponent(authToken)}&name=${encodeURIComponent(
+                userName
+              )}`
+            )
+          }
+          disabled={!latestBooking?.qr_code}
+        >
+          <Text style={styles.secondaryButtonText}>My QR Code</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() =>
+            router.push(
+              `/user/history?token=${encodeURIComponent(authToken)}&name=${encodeURIComponent(
+                userName
+              )}`
+            )
+          }
+        >
+          <Text style={styles.secondaryButtonText}>Booking History</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Book a Log Entry</Text>
         <TextInput
@@ -137,9 +185,16 @@ export default function UserDashboard() {
         />
         <TextInput
           style={styles.input}
-          value={activity}
-          onChangeText={setActivity}
-          placeholder="Activity"
+          value={time}
+          onChangeText={setTime}
+          placeholder="HH:mm"
+          placeholderTextColor="#9ca3af"
+        />
+        <TextInput
+          style={styles.input}
+          value={purpose}
+          onChangeText={setPurpose}
+          placeholder="Purpose"
           placeholderTextColor="#9ca3af"
         />
         <TextInput
@@ -179,18 +234,18 @@ export default function UserDashboard() {
           <Text style={styles.emptyText}>No bookings yet. Create one now.</Text>
         ) : (
           bookings.map((booking) => (
-            <View key={booking.id?.toString() ?? booking.date} style={styles.bookingCard}>
+            <View key={booking.id?.toString() ?? booking.booking_date} style={styles.bookingCard}>
               <View style={styles.bookingRow}>
                 <Text style={styles.bookingLabel}>Date</Text>
-                <Text style={styles.bookingValue}>{booking.date}</Text>
+                <Text style={styles.bookingValue}>{booking.booking_date}</Text>
               </View>
               <View style={styles.bookingRow}>
-                <Text style={styles.bookingLabel}>Activity</Text>
-                <Text style={styles.bookingValue}>{booking.activity}</Text>
+                <Text style={styles.bookingLabel}>Time</Text>
+                <Text style={styles.bookingValue}>{booking.booking_time}</Text>
               </View>
               <View style={styles.bookingRow}>
-                <Text style={styles.bookingLabel}>Address</Text>
-                <Text style={styles.bookingValue}>{booking.address}</Text>
+                <Text style={styles.bookingLabel}>Purpose</Text>
+                <Text style={styles.bookingValue}>{booking.purpose}</Text>
               </View>
               <View style={styles.bookingRow}>
                 <Text style={styles.bookingLabel}>Contact</Text>
@@ -272,6 +327,26 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     backgroundColor: "#64748b",
+  },
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: "#1d4ed8",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    marginRight: 10,
+  },
+  secondaryButtonDisabled: {
+    backgroundColor: "#475569",
+  },
+  secondaryButtonText: {
+    color: "#fff",
+    fontWeight: "700",
   },
   buttonText: {
     color: "#fff",
