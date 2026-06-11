@@ -181,7 +181,6 @@ export async function getAdminLogbookStats(): Promise<{
   pending: number;
   approved: number;
   done: number;
-  completed: number;
   rejected: number;
 }> {
   const logs = await getAdminLogbooks();
@@ -193,11 +192,10 @@ export async function getAdminLogbookStats(): Promise<{
       if (status === "pending") acc.pending += 1;
       if (status === "approved") acc.approved += 1;
       if (status === "done") acc.done += 1;
-      if (status === "completed") acc.completed += 1;
       if (status === "rejected") acc.rejected += 1;
 
       return acc;
     },
-    { pending: 0, approved: 0, done: 0, completed: 0, rejected: 0 }
+    { pending: 0, approved: 0, done: 0, rejected: 0 }
   );
 }
